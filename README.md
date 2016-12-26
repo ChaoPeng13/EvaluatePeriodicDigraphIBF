@@ -9,6 +9,7 @@ And the code has been tested to work well in Visual Studio 2012 with Microsoft W
 ## Optional Requirements ##
 
 GoogleTest--Used to do the unit test.
+
 Visual Leak Detection--Used to check the memory leaks.
 
 ## Evaluating Procedure ##
