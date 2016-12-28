@@ -19,7 +19,7 @@ E-mail: hbzeng@vt.edu
 
 ## Optional Requirements ##
 
-GoogleTest--Used to do the unit test.<\br>
+GoogleTest--Used to do the unit test.<br/>
 Visual Leak Detection--Used to check the memory leaks.
 
 ## Evaluating Procedure ##
