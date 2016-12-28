@@ -24,8 +24,7 @@ Visual Leak Detection--Used to check the memory leaks.
 
 ## Evaluating Procedure ##
 
-The main.cpp file includes all the experiments for our paper "Schedulability Analysis of Digraph Tasks with Interference Bound Func-
-tions", which is submitted to Real-Time Systems(2016). http://www.faculty.ece.vt.edu/zeng/Digraph IBF.pdf".
+The main.cpp file includes all the experiments for our paper "Schedulability Analysis of Digraph Tasks with Interference Bound Functions", which is submitted to Real-Time Systems(2016). http://www.faculty.ece.vt.edu/zeng/Digraph IBF.pdf".
 
 Actually, the code also includes the stateflow analysis framework.  
 
