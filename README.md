@@ -6,6 +6,23 @@ The source code implements:
 
 And the code has been tested to work well in Visual Studio 2012 with Microsoft Windows 7.
 
+## Authors ##
+### Chao Peng ###
+National University of Defense Technology, Changsha, Hunan, China
+
+E-mail: pengchao06@gmail.com
+
+### Haibo Zeng ###
+Virginia Polytechnic Institute and State University
+
+302 Whittemore (0111), Virginia Tech, Blacksburg, VA 24061, USA
+
+Tel.: +1-540-231-5961
+
+Fax: +1-540-231-3362
+
+E-mail: hbzeng@vt.edu
+
 ## Optional Requirements ##
 
 GoogleTest--Used to do the unit test.
@@ -19,4 +36,4 @@ tions", which is submitted to Real-Time Systems(2016). http://www.faculty.ece.vt
 
 Actually, the code also includes the stateflow analysis framework.  
 
-If you have any question, please contact us. Email: pengchao06@gmail.com 
+If you have any question, please contact us.
