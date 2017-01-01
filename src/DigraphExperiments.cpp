@@ -1205,6 +1205,8 @@ void DigraphExperiments::testImprovemntOnIBFCalculationInOneDigrah2(string direc
 
 	vector<double> ratios;
 	vector<double> ratios2;
+	vector<double> tPs;
+	vector<double> tNPs;
 
 	try {
 		for (int nFactor=10; nFactor<=100; nFactor += 10) {
@@ -1286,6 +1288,8 @@ void DigraphExperiments::testImprovemntOnIBFCalculationInOneDigrah2(string direc
 			}
 			ratios.push_back(sum_ratio/(maxRun-minRun+1));
 			ratios2.push_back(sum_t1/sum_t0);
+			tPs.push_back(sum_t0);
+			tNPs.push_back(sum_t1);
 		}
 	}
 	catch (bad_alloc) {
@@ -1299,6 +1303,12 @@ void DigraphExperiments::testImprovemntOnIBFCalculationInOneDigrah2(string direc
 
 	Utility::output_one_vector(cout,"ratios2",ratios2);
 	Utility::output_one_vector(fout,"ratios2",ratios2);
+
+	Utility::output_one_vector(cout,"tPs",tPs);
+	Utility::output_one_vector(fout,"tPs",tPs);
+
+	Utility::output_one_vector(cout,"tNPs",tNPs);
+	Utility::output_one_vector(fout,"tNPs",tNPs);
 
 	fout.close();
 }
@@ -1449,6 +1459,47 @@ void DigraphExperiments::generateDigraphsForTestingEffectOfDigraphPeriod2(string
 	}
 }
 
+void DigraphExperiments::generateDigraphsForTestingEffectOfDigraphPeriodUtil(string directory, int fixedNodeNum, int minUtil, int maxUtil,int stepUtil, int minRun, int maxRun) {
+	// mkdir directory
+	if ( _mkdir(directory.c_str()) == 0) {
+		cout<<"Directory: "<<directory<<" was successfully created."<<endl;
+	}
+
+	int exception = 0;
+
+	Digraph* hDigraph;
+
+	try {
+		for (int util = minUtil; util <=maxUtil; util += stepUtil) {
+			for (int run=minRun; run<=maxRun; run++) {
+				// first we generate one digraph with around 0.04 utilization
+				int times = 0;
+				while (1) {
+					hDigraph = RandomGenerator::generate_one_digraph(0,RandomGenerator::DIGRAPH_SCALE,fixedNodeNum,0.01*util/5);
+					//hDigraph->generate_strongly_connected_components();
+					//hDigraph->check_strongly_connected();
+
+					if (hDigraph->strongly_connected) break;
+
+					cout << "Run" << ++times << endl;
+					delete hDigraph;
+				}
+
+				string name = directory + "\\digraphUtil" + Utility::int_to_string(util) + "Run" + Utility::int_to_string(run) + ".dot";
+				const char *p = name.c_str();
+				cout << name <<endl;
+				FileWriter::DotFileWriter(hDigraph, p);
+
+				delete hDigraph;
+			}
+		}
+	} catch (bad_alloc) {
+		exception++;
+		cout << "bad_alloc exception. " << exception << endl;
+		delete hDigraph;
+	}
+}
+
 void DigraphExperiments::testEffectOfDigraphPeriod(string directory, string file, int startRun, int endRun, int choice) {
 	ofstream fout(file, ios::out | ios::trunc);
 	if (!fout.is_open()) {
@@ -1566,6 +1617,110 @@ void DigraphExperiments::testEffectOfDigraphPeriod(string directory, string file
 		outputResults(fout, AllLUBRBFResults, "ratioLRBF");
 		fout << endl;
 		outputResults(fout, AllLUBIBFResults, "ratioLIBF");
+		fout << endl;
+
+	} catch (bad_alloc) {
+		exception++;
+		cout << "bad_alloc exception. " << exception << endl;
+	}
+
+}
+
+void DigraphExperiments::testEffectOfDigraphPeriodUtil(string directory, string file, int minUtil, int maxUtil, int stepUtil, int startRun, int endRun) {
+	ofstream fout(file, ios::out | ios::trunc);
+	if (!fout.is_open()) {
+		cerr << "Can't open "<<file<<" file for output" <<endl;
+		exit(EXIT_FAILURE);
+	}
+
+	int exception = 0;
+
+	vector<vector<double>> AllIBFResults;
+	vector<vector<double>> AllRBFResults;
+	vector<vector<double>> AllLUBRBFResults;
+	vector<vector<double>> AllLUBIBFResults;
+	vector<int> AllNumNonSucc;
+
+	set<double> ratios;
+	ratios.insert(0.2);
+	ratios.insert(0.5);
+	ratios.insert(0.8);
+
+	try {
+		for (int util = minUtil; util <=maxUtil; util+=stepUtil) {
+			vector<double> IBFResults;
+			vector<double> RBFResults;
+			vector<double> LUBRBFResults;
+			vector<double> LUBIBFResults;
+
+			bool success = true;
+			int numNonSucc = 0;
+
+			for (int run=startRun; run<=endRun; run++) {
+				string name = directory + "\\digraphUtil" + Utility::int_to_string(util) + "Run" + Utility::int_to_string(run) + ".dot";
+				const char *p = name.c_str();
+				cout << name << endl;
+
+				vector<double> IBFResult;
+				vector<double> RBFResult;
+				vector<double> LUBRBFResult;
+				vector<double> LUBIBFResult;
+
+				double exactUtil;
+				
+				success = testEffectOfDigraphPeriodWithHarmonicSetUtil(IBFResult,RBFResult,LUBRBFResult,LUBIBFResult,ratios, p,util,exactUtil);
+
+				if (!success) {
+					numNonSucc++;
+					continue;
+				}
+
+				cout << "run=" << run << "\tExpectedUtil=" << 0.01*util/5 << "\tExactUtil=" << exactUtil << endl;
+
+				if (IBFResults.empty()) {
+					IBFResults = IBFResult;
+					RBFResults = RBFResult;
+					LUBRBFResults = LUBRBFResult;
+					LUBIBFResults = LUBIBFResult;
+				} else {
+					for (int i=0; i<IBFResults.size(); i++) {
+						IBFResults[i] = IBFResults[i] + IBFResult[i];
+						RBFResults[i] = RBFResults[i] + RBFResult[i];
+						LUBIBFResults[i] = LUBIBFResults[i] + LUBIBFResult[i];
+						LUBRBFResults[i] = LUBRBFResults[i] + LUBRBFResult[i];
+					}
+				}
+			}
+
+			AllNumNonSucc.push_back(numNonSucc);
+
+			AllRBFResults.push_back(RBFResults);
+			AllIBFResults.push_back(IBFResults);
+			AllLUBIBFResults.push_back(LUBIBFResults);
+			AllLUBRBFResults.push_back(LUBRBFResults);
+
+			fout << "======================Util=" << util << "\tNumNonSucc=" << numNonSucc << "=====================" << endl;
+			Utility::output_one_vector(fout, "NumNonSucc", AllNumNonSucc);
+			fout << endl;
+			outputResults2(fout, AllIBFResults, "ratioIBF");
+			fout << endl;
+			outputResults2(fout, AllRBFResults, "ratioRBF");
+			fout << endl;
+			outputResults2(fout, AllLUBRBFResults, "ratioLRBF");
+			fout << endl;
+			outputResults2(fout, AllLUBIBFResults, "ratioLIBF");
+			fout << endl;
+		}
+
+		Utility::output_one_vector(fout, "NumNonSucc", AllNumNonSucc);
+		fout << endl;
+		outputResults2(fout, AllIBFResults, "ratioIBF");
+		fout << endl;
+		outputResults2(fout, AllRBFResults, "ratioRBF");
+		fout << endl;
+		outputResults2(fout, AllLUBRBFResults, "ratioLRBF");
+		fout << endl;
+		outputResults2(fout, AllLUBIBFResults, "ratioLIBF");
 		fout << endl;
 
 	} catch (bad_alloc) {
@@ -1929,6 +2084,131 @@ bool DigraphExperiments::testEffectOfDigraphPeriodWithHarmonicSet(vector<double>
 	}
 
 	delete hDigraph;
+	return true;
+}
+
+bool DigraphExperiments::testEffectOfDigraphPeriodWithHarmonicSetUtil(vector<double> &IBFResult, vector<double> &RBFResult, vector<double> &LUBRBFResult, vector<double> &LUBIBFResult, set<double> ratios,  const char *p, int util, double &exactUtil) {
+	Digraph* hDigraph;
+	FileReader::DotFileReader(hDigraph,1,p);
+
+	// set the utilization
+	hDigraph->generate_strongly_connected_components();
+	hDigraph->check_strongly_connected();
+	hDigraph->calculate_period_gcd();
+	hDigraph->calculate_all_gcd();
+	hDigraph->calculate_linear_factor();
+	hDigraph->calculate_linear_upper_bounds();
+
+	if (hDigraph->strongly_connected) {
+		hDigraph->unit_digraph = new UnitDigraph(hDigraph);
+		hDigraph->unit_digraph->prepare3(false);
+	}
+	else {
+		cout << "No strongly connected." << endl;
+		delete hDigraph;
+		return false;
+	}
+
+	//cout << "After scaling wcets: factor=" << factor << "\tExpectedUtil=" << 0.1*util << "\tExactUtil=" << hDigraph->linear_factor << endl;
+	
+	exactUtil = hDigraph->linear_factor;
+
+	// calculate the periodicity parameters
+	//int tf_max = hDigraph->unit_digraph->ldef * hDigraph->pGCD + hDigraph->unit_digraph->lper*hDigraph->pGCD*2000;
+	long long int tf_max = (long long int) hDigraph->unit_digraph->lper*hDigraph->pGCD*2000;
+	/*
+	cout << "tf_max = " << tf_max << endl;
+	if (tf_max <= 0) {
+		cout << "Too large tf_max!" << endl;
+		return false;
+	}
+	*/
+	if (hDigraph->strongly_connected) {
+		hDigraph->calculate_rbf_with_periodicity_DP(tf_max,hDigraph->rbf_map3_DP);
+		hDigraph->calculate_ibf_with_periodicity_DP(tf_max,hDigraph->ibf_map3_DP);
+	}
+	else {
+		hDigraph->calculate_rbf_without_periodicity_DP(tf_max,hDigraph->rbf_map2_DP);
+		hDigraph->calculate_ibf_without_periodicity_DP(tf_max,hDigraph->ibf_map2_DP);
+	}
+
+	//cout << "LinearPeriod=" << hDigraph->unit_digraph->lper * hDigraph->pGCD << "\tLinearDefect=" << hDigraph->unit_digraph->ldef*hDigraph->pGCD + 1 << endl;
+	//cout << "Crbf = " << hDigraph->c_rbf << "\t Cibf = " << hDigraph->c_ibf << endl;
+
+	for (set<double>::iterator iter = ratios.begin(); iter != ratios.end(); iter++) {
+		double ul = 0.01*util-hDigraph->linear_factor;
+		//double tl = 1.0*hDigraph->unit_digraph->lper*hDigraph->pGCD/(*iter) + hDigraph->unit_digraph->ldef * hDigraph->pGCD+1;
+		double tl = 1.0*hDigraph->unit_digraph->lper*hDigraph->pGCD/(*iter);
+		double wcet = ul*tl;
+
+		//cout << "wcet = " << wcet << endl;
+		//cout << "lfac=" << exactUtil << "\tc_rbf = " << hDigraph->c_rbf << "\tc_ibf = " << hDigraph->c_ibf << endl;
+		
+		// ibf, arbitrary deadlines
+		double rt = 0;
+		int index = 1;
+		while (true) {
+			double temp = 0;
+			for (long long int t=1; t<tf_max; t++) {
+				temp = hDigraph->ibf2(t,hDigraph->ibf_map3_DP) + index * wcet;
+				if (temp <= t) break;
+				t = temp;
+				if ( t >= tf_max) {
+					delete hDigraph;
+					cout << "We have arrived at the boundary." << endl;
+					return false;
+				}
+			}
+			temp = temp - (index-1) * tl;
+			if (temp > rt && index > 1) cout << "Index=" << index <<"\trt_ibf=" << temp << endl;
+			if (temp <= rt) break;
+			rt = max(rt, temp);
+			if (rt <= tl) break;
+			index ++;
+		}
+
+		IBFResult.push_back(rt/tl);
+		//cout << "rt_ibf=" << rt << "\tindex=" << index << "\t";
+
+		// rbf, arbitrary deadlines
+		rt = 0;
+		index = 1;
+		while (true) {
+			double temp = 0;
+			for (long long int t=1; t<tf_max; t++) {
+				temp = hDigraph->rbf2(t,hDigraph->rbf_map3_DP) + index * wcet;
+				if (temp <= t) break;
+				t = temp;
+				if ( t >= tf_max) {
+					delete hDigraph;
+					cout << "We have arrived at the boundary." << endl;
+					return false;
+				}
+			}
+			temp = temp - (index-1) * tl;
+			if (temp > rt && index > 1)  cout << "Index=" << index <<"\trt_rbf=" << temp << endl;
+			if (temp <= rt) break;
+			rt = max(rt, temp);
+			if (rt <= tl) break;
+			index++;
+		}
+
+		RBFResult.push_back(rt/tl);
+		//cout << "rt_rbf=" << rt << "\tindex=" << index << "\t";
+
+		// lubrbf
+		rt = (hDigraph->c_rbf+wcet)/(1.0-hDigraph->linear_factor);
+		LUBRBFResult.push_back(rt/tl);
+		//cout << rt << "\t";
+
+		// lubibf
+		rt = (hDigraph->c_ibf+wcet)/(1.0-hDigraph->linear_factor);
+		LUBIBFResult.push_back(rt/tl);
+		//cout << rt << endl;
+	}
+
+	delete hDigraph;
+	return true;
 }
 
 void DigraphExperiments::generateDigraphsForTestingEffectOfTaskParameters(string directory, int minNum, int maxNum, int stepNum, int minUtil, int maxUtil, int stepUtil, int maxRun) {
@@ -2303,6 +2583,7 @@ void DigraphExperiments::testEffectOfTaskParameters2(string directory, string fi
 
 		for (int num = minNum; num <= maxNum; num += stepNum) {
 			int numNonSucc = 0;
+
 			for (int run=startRun; run<=endRun; run++) {
 				Digraph** digraphs; 
 
@@ -2495,6 +2776,223 @@ END:
 	fout.close();
 }
 
+void DigraphExperiments::testEffectOfTaskParameters2Util(string directory, string file, double factor, int minNum, int maxNum, int stepNum, int minUtil, int maxUtil, int stepUtil, int startRun, int endRun, int choice) {
+	ofstream fout(file, ios::out | ios::trunc);
+	if (!fout.is_open()) {
+		cerr << "Can't open "<<file<<" file for output" <<endl;
+		exit(EXIT_FAILURE);
+	}
+
+	int exception = 0;
+
+	map<int,map<int,double>> resultsIBF;
+	map<int,map<int,double>> resultsRBF;
+	map<int,map<int,double>> resultsLUBRBF;
+	map<int,map<int,double>> resultsLUBIBF;
+	map<int,map<int,int>> resultsNonSucc;
+
+	for (int num = minNum; num <= maxNum; num += stepNum) {
+		map<int,double> rIBF;
+		map<int,double> rRBF;
+		map<int,double> rLUBRBF;
+		map<int,double> rLUBIBF;
+		map<int,int> rNonSucc;
+
+		for (int tUtil = minUtil; tUtil <= maxUtil; tUtil += stepUtil) {
+			int numNonSucc = 0;
+
+			for (int run=startRun; run<=endRun; run++) {
+				Digraph** digraphs; 
+
+				string name = directory + "\\digraphNum" + Utility::int_to_string(num) + "Util" + Utility::int_to_string(tUtil) +"Run" + Utility::int_to_string(run) + ".dot";
+				const char *p = name.c_str();
+				cout << name <<endl;
+
+				int totalNum;
+				FileReader::DotFileReader(digraphs, totalNum,1, p);
+
+				if (totalNum != num) {
+					cerr << "Error in the task num!" << "\texpectedNum=" <<num << "\trealNum=" <<totalNum << endl;
+					exit(EXIT_FAILURE);
+				}
+
+				bool success = true;
+
+				try {
+					long long int maxPeriod = INT_MIN;
+					// prepare
+					for (int i=0; i<num; i++) {
+						Digraph* digraph = digraphs[i];
+						digraph->calculate_period_gcd();
+						digraph->calculate_all_gcd();
+
+						digraph->generate_strongly_connected_components();
+						digraph->check_strongly_connected();
+						digraph->calculate_linear_factor();
+
+						if (digraph->linear_factor <= 0  || !digraph->strongly_connected) {
+							success = false;
+							goto END;
+						}
+
+						digraph->calculate_linear_upper_bounds();
+
+						digraph->unit_digraph = new UnitDigraph(digraph);
+						digraph->unit_digraph->prepare3(false);
+
+						maxPeriod = max(maxPeriod, digraph->unit_digraph->lper*digraph->pGCD);
+					}
+
+					//maxPeriod = (double)maxPeriod/(0.01*factor)+linearDefect;
+					maxPeriod = (double)maxPeriod/(0.01*factor);
+
+					//double wcet = 0.01*4*tUtil*maxPeriod;
+					double wcet = 0.1*maxPeriod;
+
+					// calculate the upper bound response times
+					double sum_c_rbf = 0;
+					double sum_c_ibf = 0;
+					double sum_util = 0;
+
+					for (int i=0; i<num; i++) {
+						sum_c_rbf += digraphs[i]->c_rbf;
+						sum_c_ibf += digraphs[i]->c_ibf;
+						sum_util += digraphs[i]->linear_factor;
+					}
+
+					double rt_lubrbf = (sum_c_rbf + wcet)/(1.0-sum_util);
+					double rt_lubibf = (sum_c_ibf + wcet)/(1.0-sum_util);
+
+					long long int tf = rt_lubrbf;
+					//if (tf <=0) tf = INT_MAX;
+					cout << "the maximum period = " << maxPeriod << "\ttf=" << tf << endl;
+
+					int linearDefect = INT_MIN;
+					for (int i=0; i<num; i++) {
+						Digraph* digraph = digraphs[i];
+						// calculate rbf and ibf
+						cout << "Calculating RBF ..." <<endl;
+						digraph->calculate_rbf_with_periodicity_DP(tf,digraph->rbf_map3_DP);
+						cout << "Calculating IBF ..." <<endl;
+						digraph->calculate_ibf_with_periodicity_DP(tf,digraph->ibf_map3_DP);
+						linearDefect = max(linearDefect, digraph->unit_digraph->ldef * digraph->pGCD + 1);
+					}
+
+					// calculate the response times based on ibf
+					double rt_ibf = 0;
+					int index = 1;
+					while(true) {
+						double temp =0;
+						for (long long int t=rt_ibf+1; t<=tf; t++) {
+							temp = wcet*index;
+							for (int i=0; i<num; i++) 
+								temp += digraphs[i]->ibf2(t,digraphs[i]->ibf_map3_DP);
+							if (temp <= t) break;
+							t = temp;
+							if ( t >= tf) {
+								cout << "We have arrived at the boundary." << endl;
+								success = false;
+								goto END;
+							}
+						}
+						temp = temp - (index-1)*maxPeriod;
+						if (temp > rt_ibf && index > 1) 
+							cout << "Index=" << index <<"\trt_ibf=" << temp << endl;
+						if (temp <= rt_ibf) break;
+						rt_ibf = max(rt_ibf, temp);
+						if (rt_ibf <= maxPeriod) break;
+						index ++;
+					}
+
+					// calculate the response times based on rbf
+					double rt_rbf = 0;
+					index = 1;
+					while(true) {
+						double temp =0;
+						for (long long int t=rt_rbf+1; t<=tf; t++) {
+							temp = wcet*index;
+							for (int i=0; i<num; i++) 
+								temp += digraphs[i]->rbf2(t,digraphs[i]->rbf_map3_DP);
+							if (temp <= t) break;
+							t = temp;
+							if ( t >= tf) {
+								cout << "We have arrived at the boundary." << endl;
+								success = false;
+								goto END;
+							}
+						}
+						temp = temp - (index-1)*maxPeriod;
+						if (temp > rt_rbf && index > 1) 
+							cout << "Index=" << index <<"\trt_rbf=" << temp << endl;
+						if (temp <= rt_rbf) break;
+						rt_rbf = max(rt_rbf, temp);
+						if (rt_rbf <= maxPeriod) break;
+						index ++;
+					}
+
+					if (rIBF.find(tUtil) == rIBF.end()) {
+						rIBF[tUtil] = rt_ibf/maxPeriod;
+						rRBF[tUtil] = rt_rbf/maxPeriod;;
+						rLUBIBF[tUtil] = rt_lubibf/maxPeriod;
+						rLUBRBF[tUtil] = rt_lubrbf/maxPeriod;
+					}
+					else {
+						rIBF[tUtil] += rt_ibf/maxPeriod;
+						rRBF[tUtil] += rt_rbf/maxPeriod;;
+						rLUBIBF[tUtil] += rt_lubibf/maxPeriod;
+						rLUBRBF[tUtil] += rt_lubrbf/maxPeriod;
+					}
+
+					cout << "WCET=" << wcet << ":\tRBF = " << rt_rbf << "\tIBF = " << rt_ibf << "\tLUBIBF = " << rt_lubibf << "\tLUBRBF = " << rt_lubrbf << endl;
+					fout << "WCET=" << wcet << ":\tRBF = " << rt_rbf << "\tIBF = " << rt_ibf << "\tLUBIBF = " << rt_lubibf << "\tLUBRBF = " << rt_lubrbf << endl;
+
+END:
+					if (!success) numNonSucc++;
+
+					for (int i=0; i<num; i++)
+						delete digraphs[i];
+					delete[] digraphs;
+
+
+				} catch (bad_alloc) {
+					exception++;
+					cerr << "bad_alloc exception. " << exception << endl;
+					exit(EXIT_FAILURE);
+
+					for (int i=0; i<num; i++)
+						delete digraphs[i];
+					delete[] digraphs;
+				}
+
+				if (success) {
+					fout << "====================Util=" << tUtil << ",Num=" << num << ", run=" << run+1 << ", nonSucc=" << numNonSucc << "=======================" << endl; 
+					outputResults(fout, rIBF, "IBF"+Utility::int_to_string(num));
+					outputResults(fout, rRBF, "RBF"+Utility::int_to_string(num));
+					outputResults(fout, rLUBRBF, "LUBRBF"+Utility::int_to_string(num));
+					outputResults(fout, rLUBIBF, "LUBIBF"+Utility::int_to_string(num));
+				}
+			}
+
+			rNonSucc[tUtil] = numNonSucc;
+		}
+
+		resultsIBF[num] = rIBF;
+		resultsRBF[num]= rRBF;
+		resultsLUBRBF[num] = rLUBRBF;
+		resultsLUBIBF[num] = rLUBIBF;
+		resultsNonSucc[num] = rNonSucc;
+	}
+
+	fout << "===============ALL=================" << endl;
+	outputResults(fout, resultsIBF, "IBF");
+	outputResults(fout, resultsRBF, "RBF");
+	outputResults(fout, resultsLUBRBF, "LUBRBF");
+	outputResults(fout, resultsLUBIBF, "LUBIBF");
+	outputResults(fout, resultsNonSucc, "numNonSucc");
+
+	fout.close();
+}
+
 void DigraphExperiments::outputResults(ofstream& fout, vector<vector<double>> results, string name) {
 	
 	//fout << "============" << name << "==========" <<endl;
@@ -2505,6 +3003,24 @@ void DigraphExperiments::outputResults(ofstream& fout, vector<vector<double>> re
 		for (int j=0; j<result.size(); j++) {
 			fout << result.at(j);
 			if (j != result.size()-1)
+				fout << ",";
+		}
+		fout << "];" << endl;
+	}
+	//fout << "=====================================" << endl;
+}
+
+void DigraphExperiments::outputResults2(ofstream& fout, vector<vector<double>> results, string name) {
+
+	//fout << "============" << name << "==========" <<endl;
+	int sizeA = results.size();
+	int sizeB = results.front().size();
+
+	for (int i=0; i<sizeB; i++) {
+		fout << name <<  i << "=[";
+		for (int j=0; j<sizeA; j++) {
+			fout << results[j][i];
+			if (j != sizeA-1)
 				fout << ",";
 		}
 		fout << "];" << endl;

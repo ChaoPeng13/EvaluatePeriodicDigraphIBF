@@ -99,10 +99,13 @@ public:
 	/// T_h/T_l = [0,1]
 	/// U_h/U_l = 0.25 and U=U_h+U_l={0.2,0.4,0.6,0.8}
 	static void generateDigraphsForTestingEffectOfDigraphPeriod2(string directory, int fixedNodeNum, int minRun, int maxRun);
+	static void generateDigraphsForTestingEffectOfDigraphPeriodUtil(string directory, int fixedNodeNum, int minUtil, int maxUtil, int stepUtil, int minRun, int maxRun);
 	static void testEffectOfDigraphPeriod(string directory, string file, int startRun, int endRun, int choice);
+	static void testEffectOfDigraphPeriodUtil(string directory, string file, int minUtil, int maxUtil, int stepUtil, int startRun, int endRun);
 	static bool testEffectOfDigraphPeriod(vector<double> &IBFResult, vector<double> &RBFResults, vector<double> &LUBRBFResult, vector<double> &LUBIBFResult, set<double>& ratios,  const char *p, int util, double &exactUtil); 
 	static void testEffectOfDigraphPeriod2(vector<double> &ExactResult, vector<double> &LUBRBFResult, vector<double> &LUBIBFResult, set<double>& ratios,  const char *p, int util, double &exactUtil);
 	static bool testEffectOfDigraphPeriodWithHarmonicSet(vector<double> &IBFResult, vector<double> &RBFResults, vector<double> &LUBRBFResult, vector<double> &LUBIBFResult, set<double>& ratios,  const char *p, int util, double &exactUtil); 
+	static bool testEffectOfDigraphPeriodWithHarmonicSetUtil(vector<double> &IBFResult, vector<double> &RBFResults, vector<double> &LUBRBFResult, vector<double> &LUBIBFResult, set<double> ratios,  const char *p, int util, double &exactUtil);
 	
 	/// We implement this function to evaluate the effect of task number, which is similar to Bini's paper
 	/// There are n tasks, n-1 digraphs (whih high priority) and the remaining one is a periodic task (with low priority)
@@ -114,9 +117,11 @@ public:
 	/// T_h = \max{T_1,\ldots,T_{n}}
 	static void generateDigraphsForTestingEffectOfTaskParameters2(string directory,int maxNodeNum, int minNum, int maxNum, int stepNum, int minUtil, int maxUtil, int stepUtil, int startRun, int endRun);
 	static void testEffectOfTaskParameters2(string directory, string file, double factor, int minNum, int maxNum, int stepNum, int minUtil, int maxUtil, int stepUtil, int startRun, int endRun, int choice);
+	static void testEffectOfTaskParameters2Util(string directory, string file, double factor, int minNum, int maxNum, int stepNum, int minUtil, int maxUtil, int stepUtil, int startRun, int endRun, int choice);
 
 
 	static void outputResults(ofstream& fout, vector<vector<double>> results, string name);
+	static void outputResults2(ofstream& fout, vector<vector<double>> results, string name);
 	static void outputResults(ofstream& fout, map<int,map<int,double>> results, string name);
 	static void outputResults(ofstream& fout, map<int,map<int,int>> results, string name);
 	static void outputResults(ofstream& fout, map<int,double> results, string name);

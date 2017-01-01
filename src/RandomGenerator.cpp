@@ -1983,27 +1983,6 @@ Digraph** RandomGenerator::generate_digraph_system_sccs(int num, int maxNode, do
 		double factor = util[i]/digraph->linear_factor;
 		digraph->scale_wcet(factor);
 
-		
-		int run = 0;
-		while(abs(digraph->linear_factor-util[i])>0.001) {
-			double factor = util[i]/digraph->linear_factor;
-			digraph->scale_wcet(factor);
-
-			
-			// release sccs
-			for (vector<Digraph*>::iterator iter = digraph->sccs.begin(); iter != digraph->sccs.end(); iter++) {
-				(*iter)->node_vec.clear();
-				(*iter)->edge_vec.clear();
-				delete *iter;
-				*iter = NULL;
-			}
-			digraph->sccs.clear();
-			
-			digraph->generate_strongly_connected_components();
-			digraph->calculate_linear_factor();
-			cout<<"Run "<<++run<<":\tlinear factor: expected="<<util[i]<<"\tfact="<<digraph->linear_factor<<endl;
-		}
-
 		digraphs[i] = digraph;
 	}
 
